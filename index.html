@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CloudPulse - System Metrics Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --accent: #4f8ef7;
+      --accent-dim: #1e3a6e;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --radius: 8px;
+    }
+
+    body { background: var(--bg); color: var(--text); font-family: "Inter", "Segoe UI", sans-serif; font-size: 14px; line-height: 1.5; }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header .logo { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+    header .subtitle { color: var(--muted); font-size: 12px; }
+    header .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-left: auto; box-shadow: 0 0 6px var(--green); }
+
+    .key-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .key-bar label { color: var(--muted); }
+    .key-bar input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 10px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      width: 260px;
+      font-family: monospace;
+    }
+    .key-bar input:focus { outline: 1px solid var(--accent); }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; display: grid; gap: 24px; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+    @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-header h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+    .card-body { padding: 16px; }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+    .form-group input, .form-group select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px 10px;
+      border-radius: var(--radius);
+      font-size: 13px;
+    }
+    .form-group input:focus, .form-group select:focus { outline: 1px solid var(--accent); }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 4px;
+      transition: opacity 0.15s;
+    }
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.danger { background: var(--red); }
+    button.sm { width: auto; padding: 4px 10px; font-size: 12px; margin-top: 0; }
+
+    .msg { margin-top: 10px; font-size: 12px; padding: 7px 10px; border-radius: var(--radius); }
+    .msg.ok { background: #052e16; color: var(--green); border: 1px solid #166534; }
+    .msg.err { background: #450a0a; color: var(--red); border: 1px solid #991b1b; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 8px 10px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+    td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(79, 142, 247, 0.04); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge.critical { background: #450a0a; color: var(--red); }
+    .badge.warning { background: #422006; color: var(--yellow); }
+    .badge.info { background: #0c1a2e; color: var(--accent); }
+
+    .empty { text-align: center; color: var(--muted); padding: 24px; font-size: 13px; }
+
+    .refresh-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      width: auto;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 400;
+      margin-top: 0;
+    }
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .stat-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; text-align: center; }
+    .stat-card .val { font-size: 22px; font-weight: 700; color: var(--accent); }
+    .stat-card .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">CloudPulse</div>
+    <div class="subtitle">Distributed Metrics and Alerting System</div>
+  </div>
+  <div class="status-dot" id="statusDot" title="Gateway status"></div>
+</header>
+
+<div class="key-bar">
+  <label>API Key</label>
+  <input type="password" id="apiKey" placeholder="Enter your API key" value="dev-key-change-in-production" />
+</div>
+
+<div class="container">
+
+  <div class="stat-grid" id="statGrid">
+    <div class="stat-card"><div class="val" id="statTotal">-</div><div class="lbl">Total Metrics</div></div>
+    <div class="stat-card"><div class="val" id="statServices">-</div><div class="lbl">Active Services</div></div>
+    <div class="stat-card"><div class="val" id="statAlerts">-</div><div class="lbl">Active Alerts</div></div>
+  </div>
+
+  <div class="grid-2">
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Ingest Metric</h2>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <label>Service Name</label>
+          <input type="text" id="inServiceName" placeholder="e.g. auth-api" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Metric Type</label>
+            <select id="inMetricType">
+              <option value="cpu">cpu</option>
+              <option value="mem">mem</option>
+              <option value="disk">disk</option>
+              <option value="latency">latency</option>
+              <option value="error_rate">error_rate</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Value</label>
+            <input type="number" id="inValue" placeholder="e.g. 75.4" step="0.1" />
+          </div>
+        </div>
+        <button onclick="ingestMetric()">Submit Metric</button>
+        <div id="ingestMsg"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Create Alert Rule</h2>
+      </div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Metric Type</label>
+            <select id="ruleMetricType">
+              <option value="cpu">cpu</option>
+              <option value="mem">mem</option>
+              <option value="disk">disk</option>
+              <option value="latency">latency</option>
+              <option value="error_rate">error_rate</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Service (optional)</label>
+            <input type="text" id="ruleService" placeholder="all services" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Operator</label>
+            <select id="ruleOperator">
+              <option value=">">&gt;</option>
+              <option value=">=">&gt;=</option>
+              <option value="<">&lt;</option>
+              <option value="<=">&lt;=</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Threshold</label>
+            <input type="number" id="ruleThreshold" placeholder="e.g. 80" step="0.1" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Severity</label>
+          <select id="ruleSeverity">
+            <option value="warning">warning</option>
+            <option value="critical">critical</option>
+            <option value="info">info</option>
+          </select>
+        </div>
+        <button onclick="createRule()">Create Rule</button>
+        <div id="ruleMsg"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Recent Metrics</h2>
+      <button class="refresh-btn" onclick="loadMetrics()">Refresh</button>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <div id="metricsTable"><div class="empty">Loading...</div></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Active Alert Rules</h2>
+        <button class="refresh-btn" onclick="loadRules()">Refresh</button>
+      </div>
+      <div class="card-body" style="padding: 0;">
+        <div id="rulesTable"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Triggered Alerts</h2>
+        <button class="refresh-btn" onclick="loadAlerts()">Refresh</button>
+      </div>
+      <div class="card-body" style="padding: 0;">
+        <div id="alertsTable"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  function apiKey() {
+    return document.getElementById("apiKey").value.trim();
+  }
+
+  function headers() {
+    return { "Content-Type": "application/json", "X-API-Key": apiKey() };
+  }
+
+  function showMsg(elId, text, isError) {
+    const el = document.getElementById(elId);
+    el.className = "msg " + (isError ? "err" : "ok");
+    el.textContent = text;
+    setTimeout(() => { el.textContent = ""; el.className = ""; }, 4000);
+  }
+
+  function ts(unix) {
+    if (!unix) return "-";
+    return new Date(unix * 1000).toLocaleTimeString();
+  }
+
+  async function checkHealth() {
+    try {
+      const resp = await fetch("/health");
+      const dot = document.getElementById("statusDot");
+      dot.style.background = resp.ok ? "var(--green)" : "var(--red)";
+      dot.style.boxShadow = resp.ok ? "0 0 6px var(--green)" : "0 0 6px var(--red)";
+    } catch (_) {
+      document.getElementById("statusDot").style.background = "var(--red)";
+    }
+  }
+
+  async function loadMetrics() {
+    try {
+      const resp = await fetch("/api/metrics?limit=20", { headers: headers() });
+      const data = await resp.json();
+      const el = document.getElementById("metricsTable");
+      if (!Array.isArray(data) || data.length === 0) {
+        el.innerHTML = '<div class="empty">No metrics recorded yet.</div>';
+        document.getElementById("statTotal").textContent = "0";
+        return;
+      }
+      document.getElementById("statTotal").textContent = data.length >= 20 ? "20+" : data.length;
+      const rows = data.map(m =>
+        `<tr><td>${m.service_name}</td><td>${m.metric_type}</td><td>${m.value}</td><td>${ts(m.timestamp)}</td></tr>`
+      ).join("");
+      el.innerHTML = `<table><thead><tr><th>Service</th><th>Metric</th><th>Value</th><th>Time</th></tr></thead><tbody>${rows}</tbody></table>`;
+    } catch (e) {
+      document.getElementById("metricsTable").innerHTML = '<div class="empty">Failed to load.</div>';
+    }
+  }
+
+  async function loadServices() {
+    try {
+      const resp = await fetch("/api/metrics/services", { headers: headers() });
+      const data = await resp.json();
+      document.getElementById("statServices").textContent = Array.isArray(data) ? data.length : "-";
+    } catch (_) {}
+  }
+
+  async function loadAlerts() {
+    try {
+      const resp = await fetch("/api/alerts?limit=20", { headers: headers() });
+      const data = await resp.json();
+      const el = document.getElementById("alertsTable");
+      document.getElementById("statAlerts").textContent = Array.isArray(data) ? data.length : "-";
+      if (!Array.isArray(data) || data.length === 0) {
+        el.innerHTML = '<div class="empty">No alerts triggered.</div>';
+        return;
+      }
+      const rows = data.map(a =>
+        `<tr><td>${a.service_name}</td><td><span class="badge ${a.severity}">${a.severity}</span></td><td style="font-size:11px;color:var(--muted)">${a.message}</td></tr>`
+      ).join("");
+      el.innerHTML = `<table><thead><tr><th>Service</th><th>Severity</th><th>Message</th></tr></thead><tbody>${rows}</tbody></table>`;
+    } catch (e) {
+      document.getElementById("alertsTable").innerHTML = '<div class="empty">Failed to load.</div>';
+    }
+  }
+
+  async function loadRules() {
+    try {
+      const resp = await fetch("/api/rules", { headers: headers() });
+      const data = await resp.json();
+      const el = document.getElementById("rulesTable");
+      if (!Array.isArray(data) || data.length === 0) {
+        el.innerHTML = '<div class="empty">No rules configured.</div>';
+        return;
+      }
+      const rows = data.map(r =>
+        `<tr>
+          <td>${r.metric_type}</td>
+          <td>${r.operator} ${r.threshold}</td>
+          <td><span class="badge ${r.severity}">${r.severity}</span></td>
+          <td>${r.service_name || "all"}</td>
+          <td><button class="sm danger" onclick="deleteRule(${r.id})">Delete</button></td>
+        </tr>`
+      ).join("");
+      el.innerHTML = `<table><thead><tr><th>Metric</th><th>Condition</th><th>Severity</th><th>Service</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+    } catch (e) {
+      document.getElementById("rulesTable").innerHTML = '<div class="empty">Failed to load.</div>';
+    }
+  }
+
+  async function ingestMetric() {
+    const service_name = document.getElementById("inServiceName").value.trim();
+    const metric_type = document.getElementById("inMetricType").value;
+    const value = parseFloat(document.getElementById("inValue").value);
+
+    if (!service_name || isNaN(value)) {
+      showMsg("ingestMsg", "Service name and value are required.", true);
+      return;
+    }
+
+    try {
+      const resp = await fetch("/api/metrics", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ service_name, metric_type, value }),
+      });
+      const data = await resp.json();
+      if (resp.ok) {
+        showMsg("ingestMsg", "Metric recorded successfully.", false);
+        loadMetrics();
+        loadServices();
+        loadAlerts();
+      } else {
+        showMsg("ingestMsg", data.error || "Failed to ingest metric.", true);
+      }
+    } catch (e) {
+      showMsg("ingestMsg", "Request failed. Check gateway connection.", true);
+    }
+  }
+
+  async function createRule() {
+    const metric_type = document.getElementById("ruleMetricType").value;
+    const service_name = document.getElementById("ruleService").value.trim() || null;
+    const operator = document.getElementById("ruleOperator").value;
+    const threshold = parseFloat(document.getElementById("ruleThreshold").value);
+    const severity = document.getElementById("ruleSeverity").value;
+
+    if (isNaN(threshold)) {
+      showMsg("ruleMsg", "Threshold is required.", true);
+      return;
+    }
+
+    try {
+      const resp = await fetch("/api/rules", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ metric_type, service_name, operator, threshold, severity }),
+      });
+      const data = await resp.json();
+      if (resp.ok) {
+        showMsg("ruleMsg", "Alert rule created.", false);
+        loadRules();
+      } else {
+        showMsg("ruleMsg", data.error || "Failed to create rule.", true);
+      }
+    } catch (e) {
+      showMsg("ruleMsg", "Request failed.", true);
+    }
+  }
+
+  async function deleteRule(id) {
+    try {
+      await fetch(`/api/rules/${id}`, { method: "DELETE", headers: headers() });
+      loadRules();
+    } catch (e) {
+      alert("Failed to delete rule.");
+    }
+  }
+
+  function loadAll() {
+    checkHealth();
+    loadMetrics();
+    loadServices();
+    loadAlerts();
+    loadRules();
+  }
+
+  document.getElementById("apiKey").addEventListener("change", loadAll);
+
+  loadAll();
+  setInterval(loadAll, 30000);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  metrics-service:
+    build: ./metrics-service
+    ports:
+      - "5001:5001"
+    environment:
+      - DB_PATH=/data/metrics.db
+    volumes:
+      - metrics-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  alert-service:
+    build: ./alert-service
+    ports:
+      - "5002:5002"
+    environment:
+      - DB_PATH=/data/alerts.db
+    volumes:
+      - alert-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5002/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "5000:5000"
+    environment:
+      - METRICS_SERVICE_URL=http://metrics-service:5001
+      - ALERT_SERVICE_URL=http://alert-service:5002
+      - API_KEY=dev-key-change-in-production
+    depends_on:
+      metrics-service:
+        condition: service_healthy
+      alert-service:
+        condition: service_healthy
+
+volumes:
+  metrics-data:
+  alert-data:

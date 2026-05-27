@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-metrics-service:
+    name: Test metrics-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r metrics-service/requirements.txt
+
+      - name: Run tests
+        run: pytest metrics-service/tests/ -v --tb=short
+
+  test-alert-service:
+    name: Test alert-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r alert-service/requirements.txt
+
+      - name: Run tests
+        run: pytest alert-service/tests/ -v --tb=short
+
+  test-api-gateway:
+    name: Test api-gateway
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r api-gateway/requirements.txt
+
+      - name: Run tests
+        run: pytest api-gateway/tests/ -v --tb=short
+
+  docker-build:
+    name: Docker build check
+    runs-on: ubuntu-latest
+    needs: [test-metrics-service, test-alert-service, test-api-gateway]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build all images
+        run: docker compose build
