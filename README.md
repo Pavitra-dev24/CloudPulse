@@ -72,7 +72,7 @@ This project demonstrates full-stack development across distributed services, co
 
 ## Getting Started
 
-### Option 1: Docker Compose (recommended)
+### Docker Compose
 
 ```bash
 git clone https://github.com/your-username/cloudpulse.git
@@ -88,31 +88,6 @@ To use a custom key, set the environment variable before starting:
 
 ```bash
 API_KEY=your-secret-key docker compose up --build
-```
-
-### Option 2: Run services manually
-
-You need Python 3.11 and pip. Open three terminals.
-
-**Terminal 1 - Metrics Service**
-```bash
-cd metrics-service
-pip install -r requirements.txt
-python app.py
-```
-
-**Terminal 2 - Alert Service**
-```bash
-cd alert-service
-pip install -r requirements.txt
-python app.py
-```
-
-**Terminal 3 - API Gateway**
-```bash
-cd api-gateway
-pip install -r requirements.txt
-METRICS_SERVICE_URL=http://localhost:5001 ALERT_SERVICE_URL=http://localhost:5002 python app.py
 ```
 
 ---
@@ -282,9 +257,3 @@ SQLite is sufficient for a demonstration of this scope and requires zero infrast
 
 **Why synchronous alert evaluation on metric ingestion?**
 For simplicity and clarity in a demo context. A production system would use a message queue (RabbitMQ, Kafka) to decouple ingestion from evaluation and support higher throughput.
-
----
-
-## License
-
-MIT
